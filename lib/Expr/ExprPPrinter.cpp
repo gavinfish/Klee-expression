@@ -652,6 +652,7 @@ void ExprPPrinter::printSymbolicConstraints(llvm::raw_ostream &os,
 	printExpressions(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
+int caseCount = 0;
 void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
                               const ConstraintManager &constraints,
                               const ref<Expr> &q,
@@ -672,7 +673,7 @@ void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
 
 	  PrintContext PC(os);
 
-	  PC << "(query [";
+	  PC << "case "<<++caseCount<<": [";
 
 	  // Ident at constraint list;
 	  unsigned indent = PC.pos;
@@ -684,11 +685,5 @@ void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
 	      PC.breakLine(indent);
 	  }
 	  PC << ']';
-
-	  p.printSeparator(PC, constraints.empty(), indent-1);
-	  p.printExpression(q, PC);
-
-
-	  PC << ')';
 	  PC.breakLine();
 }
