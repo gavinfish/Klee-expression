@@ -43,3 +43,7 @@ Release+Asserts*
 # LLVM
 *.ll
 *.bc
+
+# Eclipse
+.project
+.cproject
