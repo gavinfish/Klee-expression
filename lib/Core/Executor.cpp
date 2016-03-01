@@ -2437,39 +2437,6 @@ void Executor::bindModuleConstants() {
   }
 }
 
-void Executor::checkMemoryUsage() {
-  if (!MaxMemory)
-    return;
-  if ((stats::instructions & 0xFFFF) == 0) {
-    // We need to avoid calling GetTotalMallocUsage() often because it
-    // is O(elts on freelist). This is really bad since we start
-    // to pummel the freelist once we hit the memory cap.
-    unsigned mbs = util::GetTotalMallocUsage() >> 20;
-    if (mbs > MaxMemory) {
-      if (mbs > MaxMemory + 100) {
-        // just guess at how many to kill
-        unsigned numStates = states.size();
-        unsigned toKill = std::max(1U, numStates - numStates * MaxMemory / mbs);
-        klee_warning("killing %d states (over memory cap)", toKill);
-        std::vector<ExecutionState *> arr(states.begin(), states.end());
-        for (unsigned i = 0, N = arr.size(); N && i < toKill; ++i, --N) {
-          unsigned idx = rand() % N;
-          // Make two pulls to try and not hit a state that
-          // covered new code.
-          if (arr[idx]->coveredNew)
-            idx = rand() % N;
-
-          std::swap(arr[idx], arr[N - 1]);
-          terminateStateEarly(*arr[N - 1], "Memory limit exceeded.");
-        }
-      }
-      atMemoryLimit = true;
-    } else {
-      atMemoryLimit = false;
-    }
-  }
-}
-
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
@@ -2555,7 +2522,39 @@ void Executor::run(ExecutionState &initialState) {
     executeInstruction(state, ki);
     processTimers(&state, MaxInstructionTime);
 
-    checkMemoryUsage();
+    if (MaxMemory) {
+      if ((stats::instructions & 0xFFFF) == 0) {
+        // We need to avoid calling GetMallocUsage() often because it
+        // is O(elts on freelist). This is really bad since we start
+        // to pummel the freelist once we hit the memory cap.
+        unsigned mbs = util::GetTotalMallocUsage() >> 20;
+        if (mbs > MaxMemory) {
+          if (mbs > MaxMemory + 100) {
+            // just guess at how many to kill
+            unsigned numStates = states.size();
+            unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+
+            klee_warning("killing %d states (over memory cap)", toKill);
+
+            std::vector<ExecutionState*> arr(states.begin(), states.end());
+            for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
+              unsigned idx = rand() % N;
+
+              // Make two pulls to try and not hit a state that
+              // covered new code.
+              if (arr[idx]->coveredNew)
+                idx = rand() % N;
+
+              std::swap(arr[idx], arr[N-1]);
+              terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
+            }
+          }
+          atMemoryLimit = true;
+        } else {
+          atMemoryLimit = false;
+        }
+      }
+    }
 
     updateStates(&state);
   }
@@ -2627,11 +2626,18 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   return info.str();
 }
 
+#include "klee/util/ExprPPrinter.h"
 void Executor::terminateState(ExecutionState &state) {
   if (replayOut && replayPosition!=replayOut->numObjects) {
     klee_warning_once(replayOut, 
                       "replay did not consume all objects in test input.");
   }
+
+  // Print the constraints
+  std::string s;
+  llvm::raw_fd_ostream *out = new llvm::raw_fd_ostream("-",s);
+  const ConstraintManager myConstraints = state.constraints;
+  ExprPPrinter::printSymbolicConstraints(*out,myConstraints);
 
   interpreterHandler->incPathsExplored();
 

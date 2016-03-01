@@ -37,6 +37,35 @@ namespace {
   PCAllConstWidths("pc-all-const-widths",  llvm::cl::init(false));
 }
 
+/**
+ * Class for intepreting Expr::Kind to a string
+ * FIXME: move to right place in *H file 
+ **/
+class ExprKindView{
+public:
+	  static std::string getSymbol(Expr::Kind kind){
+		  std::map<Expr::Kind,std::string>::const_iterator finder = m_kindMap.find(kind);
+		  if (finder != m_kindMap.end()){
+			  return finder->second;
+		  }
+		  else {
+			  return "Kind Error";
+		  }
+	  }
+
+private:
+	  static std::map<Expr::Kind,std::string> createKindMap(){
+		  std::map<Expr::Kind,std::string> kindMap;
+		  kindMap[Expr::Eq] = "==";
+		  kindMap[Expr::Add] = "+";
+		  kindMap[Expr::Slt] = "<";
+		  return kindMap;
+	  }
+
+	  static const std::map<Expr::Kind,std::string> m_kindMap;
+};
+const std::map<Expr::Kind,std::string> ExprKindView::m_kindMap = ExprKindView::createKindMap();
+
 class PPrinter : public ExprPPrinter {
 public:
   std::set<const Array*> usedArrays;
@@ -282,6 +311,10 @@ private:
     printUpdateList(re->updates, PC);
   }
 
+  void printSymbolicRead(const ReadExpr *re, PrintContext &PC, unsigned indent) {
+    printUpdateList(re->updates, PC);
+  }
+
   void printExtract(const ExtractExpr *ee, PrintContext &PC, unsigned indent) {
     PC << ee->offset << ' ';
     print(ee->expr, PC);
@@ -412,6 +445,69 @@ public:
       }
     }
   }
+
+  void printExpression(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+        printConst(CE, PC, printConstWidth);
+      else {
+        std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
+        if (it!=bindings.end()) {
+          PC << 'N' << it->second;
+        } else {
+  //        if (!hasScan || shouldPrint.count(e)) {
+  //          PC << 'N' << counter <(const ref<Expr> &e, unsigned indent=0) = 0;< ':';
+  //          bindings.insert(std::make_pair(e, counter++));
+  //        }
+
+          // Detect multibyte reads.
+          // FIXME: Hrm. One problem with doing this is that we are
+          // masking the sharing of the indices which aren't
+          // visible. Need to think if this matters... probably not
+          // because if they are offset reads then its either constant,
+          // or they are (base + offset) and base will get printed with
+          // a declaration.
+          if (PCMultibyteReads && e->getKind() == Expr::Concat) {
+  	  const ReadExpr *base = hasOrderedReads(e, -1);
+  	  int isLSB = (base != NULL);
+  	  if (!isLSB)
+  	    base = hasOrderedReads(e, 1);
+  	  if (base) {
+  //	    PC << "(Read" << (isLSB ? "LSB" : "MSB");
+  //	    printWidth(PC, e);
+  //	    PC << ' ';
+  	    printSymbolicRead(base, PC, PC.pos);
+  //	    PC << ')';
+  	    return;
+  	  }
+          }
+
+  //	PC << '(' << e->getKind();
+  //        printWidth(PC, e);
+  //        PC << ' ';
+
+          // Indent at first argument and dispatch to appropriate print
+          // routine for exprs which require special handling.
+          unsigned indent = PC.pos;
+          if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
+            printSymbolicRead(re, PC, indent);
+          } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
+            printExtract(ee, PC, indent);
+          } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt) {
+  		  printExpr(e.get(), PC, indent, true);
+          } else if(const BinaryExpr *be = dyn_cast<BinaryExpr>(e)){
+          	PC << "(";
+          	printExpression(be->getKid(0), PC);
+  //        	PC << " " << be->getKind() << " ";
+          	PC << " " << ExprKindView::getSymbol(be->getKind())<<" ";
+          	printExpression(be->getKid(1), PC);
+          	PC << ")";
+          } else{
+            printExpr(e.get(), PC, indent);
+          }
+  //        PC << ")";
+        }
+      }
+    }
 
   /* Public utility functions */
 
@@ -549,4 +645,50 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
 
   PC << ')';
   PC.breakLine();
+}
+
+void ExprPPrinter::printSymbolicConstraints(llvm::raw_ostream &os,
+                                    const ConstraintManager &constraints) {
+	printExpressions(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
+}
+
+void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
+                              const ConstraintManager &constraints,
+                              const ref<Expr> &q,
+                              const ref<Expr> *evalExprsBegin,
+                              const ref<Expr> *evalExprsEnd,
+                              const Array * const *evalArraysBegin,
+                              const Array * const *evalArraysEnd,
+                              bool printArrayDecls) {
+	  PPrinter p(os);
+
+	  for (ConstraintManager::const_iterator it = constraints.begin(),
+	         ie = constraints.end(); it != ie; ++it)
+	    p.scan(*it);
+	  p.scan(q);
+
+	  for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it)
+	    p.scan(*it);
+
+	  PrintContext PC(os);
+
+	  PC << "(query [";
+
+	  // Ident at constraint list;
+	  unsigned indent = PC.pos;
+	  for (ConstraintManager::const_iterator it = constraints.begin(),
+	         ie = constraints.end(); it != ie;) {
+	    p.printExpression(*it, PC);
+	    ++it;
+	    if (it != ie)
+	      PC.breakLine(indent);
+	  }
+	  PC << ']';
+
+	  p.printSeparator(PC, constraints.empty(), indent-1);
+	  p.printExpression(q, PC);
+
+
+	  PC << ')';
+	  PC.breakLine();
 }
