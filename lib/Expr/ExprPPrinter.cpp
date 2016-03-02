@@ -56,9 +56,37 @@ public:
 private:
 	  static std::map<Expr::Kind,std::string> createKindMap(){
 		  std::map<Expr::Kind,std::string> kindMap;
-		  kindMap[Expr::Eq] = "==";
+
+		  // Arithmetic
 		  kindMap[Expr::Add] = "+";
+		  kindMap[Expr::Sub] = "-";
+		  kindMap[Expr::Mul] = "*";
+		  kindMap[Expr::UDiv] = "/";
+		  kindMap[Expr::SDiv] = "/";
+		  kindMap[Expr::URem] = "%";
+		  kindMap[Expr::SRem] = "%";
+
+		  // Bit
+		  kindMap[Expr::Not] = "!";
+		  kindMap[Expr::And] = "&";
+		  kindMap[Expr::Or] = "|";
+		  kindMap[Expr::Xor] = "^";
+		  kindMap[Expr::Shl] = "<<";
+		  kindMap[Expr::LShr] = ">>";
+		  kindMap[Expr::AShr] = ">>";
+
+
+		  // Compare
+		  kindMap[Expr::Eq] = "==";
+		  kindMap[Expr::Ne] = "!=";
+		  kindMap[Expr::Ult] = "<";
+		  kindMap[Expr::Ule] = "<=";
+		  kindMap[Expr::Ugt] = ">";
+		  kindMap[Expr::Uge] = ">=";
 		  kindMap[Expr::Slt] = "<";
+		  kindMap[Expr::Sle] = "<=";
+		  kindMap[Expr::Sgt] = ">";
+		  kindMap[Expr::Sge] = ">=";
 		  return kindMap;
 	  }
 
@@ -495,12 +523,30 @@ public:
           } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt) {
   		  printExpr(e.get(), PC, indent, true);
           } else if(const BinaryExpr *be = dyn_cast<BinaryExpr>(e)){
-          	PC << "(";
-          	printExpression(be->getKid(0), PC);
-  //        	PC << " " << be->getKind() << " ";
-          	PC << " " << ExprKindView::getSymbol(be->getKind())<<" ";
-          	printExpression(be->getKid(1), PC);
-          	PC << ")";
+        	if (be->getKind()==Expr::Eq){
+        		const ConstantExpr *ce = dyn_cast<ConstantExpr>(be->getKid(0).get());
+        		if(ce && ce->isFalse()){
+        			PC << "(";
+        			PC << "! ";
+        			printExpression(be->getKid(1), PC);
+        			PC << ")";
+        		}
+        		else{
+        			PC << "(";
+        			printExpression(be->getKid(0), PC);
+        	//        	PC << " " << be->getKind() << " ";
+        			PC << " " << ExprKindView::getSymbol(be->getKind())<<" ";
+        			printExpression(be->getKid(1), PC);
+        			PC << ")";
+        		}
+        	}
+        	else {
+              	PC << "(";
+              	printExpression(be->getKid(0), PC);
+              	PC << " " << ExprKindView::getSymbol(be->getKind())<<" ";
+              	printExpression(be->getKid(1), PC);
+              	PC << ")";
+        	}
           } else{
             printExpr(e.get(), PC, indent);
           }
