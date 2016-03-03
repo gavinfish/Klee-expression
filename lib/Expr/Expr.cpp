@@ -741,7 +741,19 @@ static ref<Expr> AddExpr_create(Expr *l, Expr *r) {
     } else if (rk==Expr::Sub && isa<ConstantExpr>(r->getKid(0))) { // a + (k-b) = k+(a-b)
       return AddExpr::create(r->getKid(0),
                              SubExpr::create(l, r->getKid(1)));
-    } else {
+    } else if (lk==Expr::Concat && rk==Expr::Concat) {
+    	if(*l==*r){
+			return MulExpr::alloc(ConstantExpr::alloc(2,r->getWidth()),r);
+    	}
+    	return AddExpr::alloc(l,r);
+    } else if (lk==Expr::Mul && rk==Expr::Concat){
+    	if(*(l->getKid(1))==*r){
+        	const ConstantExpr *ce = dyn_cast<ConstantExpr>(l->getKid(0));
+        	return MulExpr::alloc(ConstantExpr::alloc(ce->getZExtValue(r->getWidth())+1,r->getWidth()),r);
+    	}
+    	return AddExpr::alloc(l,r);
+    }
+    else {
       return AddExpr::alloc(l, r);
     }
   }  
