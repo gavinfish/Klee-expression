@@ -502,10 +502,19 @@ public:
 					printSymbolicRead(re, PC, indent);
 				} else if (const ExtractExpr *ee = dyn_cast < ExtractExpr
 						> (e)) {
-					printExtract(ee, PC, indent);
+//					PC << ee->offset << ' ';
+					printExpression(ee->expr, PC);
 				} else if (e->getKind() == Expr::Concat
 						|| e->getKind() == Expr::SExt) {
-					printExpr(e.get(), PC, indent, true);
+//					printExpr(e.get(), PC, indent, true);
+					Expr *ep = e.get();
+				    bool simple = hasSimpleKids(ep);
+
+				    printExpression(ep->getKid(0), PC);
+				    for (unsigned i=1; i<ep->getNumKids(); i++) {
+				      printSeparator(PC, simple, indent);
+				      printExpression(ep->getKid(i), PC, true);
+				    }
 				} else if (const BinaryExpr *be = dyn_cast < BinaryExpr > (e)) {
 					if (be->getKind() == Expr::Eq) {
 						const ConstantExpr *ce = dyn_cast < ConstantExpr
