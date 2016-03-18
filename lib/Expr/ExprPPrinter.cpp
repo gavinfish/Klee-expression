@@ -724,3 +724,11 @@ void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
 	PC << ']';
 	PC.breakLine();
 }
+
+void ExprPPrinter::printExpr(llvm::raw_ostream &os, const ref<Expr> &e){
+	  PPrinter p(os);
+	  p.scan(e);
+
+	  PrintContext PC(os);
+	  p.printExpression(e,PC);
+}

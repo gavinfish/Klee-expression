@@ -31,6 +31,7 @@
 #include "klee/CommandLine.h"
 #include "klee/Common.h"
 #include "klee/util/Assignment.h"
+#include "klee/util/LLVMExprOstream.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
 #include "klee/util/ExprUtil.h"
@@ -2626,7 +2627,6 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   return info.str();
 }
 
-#include "klee/util/ExprPPrinter.h"
 void Executor::terminateState(ExecutionState &state) {
   if (replayOut && replayPosition!=replayOut->numObjects) {
     klee_warning_once(replayOut, 
@@ -2634,10 +2634,8 @@ void Executor::terminateState(ExecutionState &state) {
   }
 
   // Print the constraints
-  std::string s;
-  llvm::raw_fd_ostream *out = new llvm::raw_fd_ostream("-",s);
   const ConstraintManager myConstraints = state.constraints;
-  ExprPPrinter::printSymbolicConstraints(*out,myConstraints);
+  LLVMExprOstream::printConstraints(myConstraints);
 
   interpreterHandler->incPathsExplored();
 
