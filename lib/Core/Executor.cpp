@@ -94,6 +94,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iosfwd>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -1418,8 +1419,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
               result = ZExtExpr::create(result, to);
             }
           }
-
           bindLocal(kcaller, state, result);
+
+          // Get all expressions by Ret isntruction
+          const ConstraintManager myConstraints = state.constraints;
+          LLVMExprOstream::printConstraints(myConstraints);
+          std::cout<<"expression: "<<std::flush;
+          LLVMExprOstream::printExpr(result);
+          std::cout<<"\n"<<std::endl;
         }
       } else {
         // We check that the return value has no users instead of
@@ -2632,10 +2639,6 @@ void Executor::terminateState(ExecutionState &state) {
     klee_warning_once(replayOut, 
                       "replay did not consume all objects in test input.");
   }
-
-  // Print the constraints
-  const ConstraintManager myConstraints = state.constraints;
-  LLVMExprOstream::printConstraints(myConstraints);
 
   interpreterHandler->incPathsExplored();
 

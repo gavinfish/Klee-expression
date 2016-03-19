@@ -711,7 +711,7 @@ void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
 
 	PrintContext PC(os);
 
-	PC << "case " << ++caseCount << ": [";
+	PC << "constraint " << ++caseCount << ": [";
 	// Ident at constraint list;
 	unsigned indent = PC.pos;
 	for (ConstraintManager::const_iterator it = constraints.begin(), ie =
