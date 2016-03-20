@@ -419,6 +419,30 @@ public:
     }    
   }
 
+  void printSignedConst(const ref<ConstantExpr> &e, PrintContext &PC,
+                  bool printWidth) {
+    if (e->getWidth() == Expr::Bool)
+      PC << (e->isTrue() ? "true" : "false");
+    else {
+      if (PCAllConstWidths)
+	printWidth = true;
+
+      if (printWidth)
+	PC << "(w" << e->getWidth() << " ";
+
+      if (e->getWidth() <= 64) {
+        PC << e->getSExtValue();
+      } else {
+        std::string S;
+        e->toString(S);
+        PC << S;
+      }
+
+      if (printWidth)
+	PC << ")";
+    }
+  }
+
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
       printConst(CE, PC, printConstWidth);
@@ -477,7 +501,7 @@ public:
 	void printExpression(const ref<Expr> &e, PrintContext &PC,
 			bool printConstWidth = false) {
 		if (ConstantExpr *CE = dyn_cast < ConstantExpr > (e))
-			printConst(CE, PC, printConstWidth);
+			printSignedConst(CE, PC, printConstWidth);
 		else {
 			std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
 			if (it != bindings.end()) {

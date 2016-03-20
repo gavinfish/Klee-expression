@@ -973,6 +973,19 @@ public:
     return value.getZExtValue();
   }
 
+  /// getSExtValue - Returns the constant value signal extended to the
+  /// return type of this method
+  ///\param bits - optional parameter that can be used to check that the
+  /// number of bits used by this constant is <= to the parameter
+  /// value. This is useful for checking that type casts won't truncate
+  /// useful bits.
+  ///
+  /// Example: int8_t byte= (int8_t) constant->getZExtValue(8);
+  int64_t getSExtValue(unsigned bits = 64) const {
+	assert(getWidth() <= bits && "Value may be out of range!");
+	return value.getSExtValue();
+  }
+
   /// getLimitedValue - If this value is smaller than the specified limit,
   /// return it, otherwise return the limit value.
   uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
