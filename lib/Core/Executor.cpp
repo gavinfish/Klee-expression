@@ -125,7 +125,7 @@ namespace {
  
   cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
-                        cl::init(false),
+                        cl::init(true),
 			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
 
   cl::opt<bool>
@@ -1421,12 +1421,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           }
           bindLocal(kcaller, state, result);
 
-          // Get all expressions by Ret isntruction
-          const ConstraintManager myConstraints = state.constraints;
-          LLVMExprOstream::printConstraints(myConstraints);
-          std::cout<<"expression: "<<std::flush;
-          LLVMExprOstream::printExpr(result);
-          std::cout<<"\n"<<std::endl;
+          // Get all expressions by Ret instruction of klee_output
+          CallInst *ci = dyn_cast<CallInst>(caller);
+          Function *cf = ci->getCalledFunction();
+          const char *funcName = cf->getName().data();
+          const char *targetName = "klee_output";
+          if(strstr(funcName, targetName) != NULL){
+              std::cout<<"expression: "<<std::flush;
+              LLVMExprOstream::printExpr(result);
+              std::cout<<"\n"<<std::endl;
+          }
         }
       } else {
         // We check that the return value has no users instead of
@@ -2639,6 +2643,11 @@ void Executor::terminateState(ExecutionState &state) {
     klee_warning_once(replayOut, 
                       "replay did not consume all objects in test input.");
   }
+
+  std::cout<<std::flush;
+  const ConstraintManager myConstraints = state.constraints;
+  LLVMExprOstream::printConstraints(myConstraints);
+
 
   interpreterHandler->incPathsExplored();
 
