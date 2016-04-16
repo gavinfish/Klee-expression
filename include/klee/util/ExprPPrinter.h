@@ -76,14 +76,9 @@ namespace klee {
     static void printSymbolicConstraints(llvm::raw_ostream &os,
     									 const ConstraintManager &constraints);
 
-    static void printExpressions(llvm::raw_ostream &os,
+    static void printCons(llvm::raw_ostream &os,
                            const ConstraintManager &constraints,
-                           const ref<Expr> &q,
-                           const ref<Expr> *evalExprsBegin = 0,
-                           const ref<Expr> *evalExprsEnd = 0,
-                           const Array * const* evalArraysBegin = 0,
-                           const Array * const* evalArraysEnd = 0,
-                           bool printArrayDecls = true);
+                           const ref<Expr> &q);
 
     static void printExpr(llvm::raw_ostream &os, const ref<Expr> &e);
   };

@@ -192,9 +192,9 @@ private:
     bool openedList = false, nextShouldBreak = false;
     unsigned outerIndent = PC.pos;
     unsigned middleIndent = 0;
-    for (const UpdateNode *un = head; un; un = un->next) {      
+    for (const UpdateNode *un = head; un; un = un->next) {
       // We are done if we hit the cache.
-      std::map<const UpdateNode*, unsigned>::iterator it = 
+      std::map<const UpdateNode*, unsigned>::iterator it =
         updateBindings.find(un);
       if (it!=updateBindings.end()) {
         if (openedList)
@@ -206,11 +206,11 @@ private:
           PC << "] @";
         if (un != head)
           PC.breakLine(outerIndent);
-        PC << "U" << updateCounter << ":"; 
+        PC << "U" << updateCounter << ":";
         updateBindings.insert(std::make_pair(un, updateCounter++));
         openedList = nextShouldBreak = false;
      }
-    
+
       if (!openedList) {
         openedList = 1;
         PC << '[';
@@ -226,8 +226,8 @@ private:
       PC << "=";
       print(un->value, PC);
       //PC << ')';
-      
-      nextShouldBreak = !(isa<ConstantExpr>(un->index) && 
+
+      nextShouldBreak = !(isa<ConstantExpr>(un->index) &&
                           isa<ConstantExpr>(un->value));
     }
 
@@ -419,29 +419,26 @@ public:
     }    
   }
 
-  void printSignedConst(const ref<ConstantExpr> &e, PrintContext &PC,
-                  bool printWidth) {
-    if (e->getWidth() == Expr::Bool)
-      PC << (e->isTrue() ? "true" : "false");
-    else {
-      if (PCAllConstWidths)
-	printWidth = true;
-
-      if (printWidth)
-	PC << "(w" << e->getWidth() << " ";
-
-      if (e->getWidth() <= 64) {
-        PC << e->getSExtValue();
-      } else {
-        std::string S;
-        e->toString(S);
-        PC << S;
-      }
-
-      if (printWidth)
-	PC << ")";
-    }
-  }
+	void printSignedConst(const ref<ConstantExpr> &e, PrintContext &PC,
+			bool printWidth) {
+		if (e->getWidth() == Expr::Bool)
+			PC << (e->isTrue() ? "true" : "false");
+		else {
+			if (PCAllConstWidths)
+				printWidth = true;
+			if (printWidth)
+				PC << "(w" << e->getWidth() << " ";
+			if (e->getWidth() <= 64) {
+				PC << e->getSExtValue();
+			} else {
+				std::string S;
+				e->toString(S);
+				PC << S;
+			}
+			if (printWidth)
+				PC << ")";
+		}
+	}
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
@@ -500,73 +497,45 @@ public:
 
 	void printExpression(const ref<Expr> &e, PrintContext &PC,
 			bool printConstWidth = false) {
-		if (ConstantExpr *CE = dyn_cast < ConstantExpr > (e))
-			printSignedConst(CE, PC, printConstWidth);
+		if (ConstantExpr *ce = dyn_cast < ConstantExpr > (e))
+			printSignedConst(ce, PC, printConstWidth);
 		else {
-			std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
-			if (it != bindings.end()) {
-				PC << 'N' << it->second;
-			} else {
-
-				if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-					const ReadExpr *base = hasOrderedReads(e, -1);
-					int isLSB = (base != NULL);
-					if (!isLSB)
-						base = hasOrderedReads(e, 1);
-					if (base) {
-						printSymbolicRead(base, PC, PC.pos);
-						return;
-					}
+			if (PCMultibyteReads && e->getKind() == Expr::Concat) {
+				const ReadExpr *base = hasOrderedReads(e, -1);
+				int isLSB = (base != NULL);
+				if (!isLSB)
+					base = hasOrderedReads(e, 1);
+				if (base) {
+					printSymbolicRead(base, PC, PC.pos);
+					return;
 				}
+			}
 
-				// Indent at first argument and dispatch to appropriate print
-				// routine for exprs which require special handling.
-				unsigned indent = PC.pos;
-				if (const ReadExpr *re = dyn_cast < ReadExpr > (e)) {
-					printSymbolicRead(re, PC, indent);
-				} else if (const ExtractExpr *ee = dyn_cast < ExtractExpr
-						> (e)) {
-//					PC << ee->offset << ' ';
-					printExpression(ee->expr, PC);
-				} else if (e->getKind() == Expr::Concat
-						|| e->getKind() == Expr::SExt) {
-//					printExpr(e.get(), PC, indent, true);
-					Expr *ep = e.get();
-				    bool simple = hasSimpleKids(ep);
-
-				    printExpression(ep->getKid(0), PC);
-				    for (unsigned i=1; i<ep->getNumKids(); i++) {
-				      printSeparator(PC, simple, indent);
-				      printExpression(ep->getKid(i), PC, true);
-				    }
-				} else if (const BinaryExpr *be = dyn_cast < BinaryExpr > (e)) {
-					if (be->getKind() == Expr::Eq) {
-						const ConstantExpr *ce = dyn_cast < ConstantExpr
-								> (be->getKid(0).get());
-						if (ce && ce->isFalse()) {
-							PC << "(";
-							PC << "! ";
-							printExpression(be->getKid(1), PC);
-							PC << ")";
-						} else {
-							PC << "(";
-							printExpression(be->getKid(0), PC);
-							PC << " " << ExprKindView::getSymbol(be->getKind())
-									<< " ";
-							printExpression(be->getKid(1), PC);
-							PC << ")";
-						}
-					} else {
-						PC << "(";
-						printExpression(be->getKid(0), PC);
-						PC << " " << ExprKindView::getSymbol(be->getKind())
-								<< " ";
+			unsigned indent = PC.pos;
+			if (const ReadExpr *re = dyn_cast < ReadExpr > (e)) {
+				printSymbolicRead(re, PC, indent);
+			} else if (const ExtractExpr *ee = dyn_cast < ExtractExpr > (e)) {
+				printExpression(ee->expr, PC);
+			} else if (const BinaryExpr *be = dyn_cast < BinaryExpr > (e)) {
+				if (be->getKind() == Expr::Eq) {
+					const ConstantExpr *ce = dyn_cast < ConstantExpr
+							> (be->getKid(0).get());
+					if (ce && ce->isFalse()) {
+						PC << "! ";
 						printExpression(be->getKid(1), PC);
-						PC << ")";
 					}
 				} else {
-					printExpr(e.get(), PC, indent);
+					PC << "(";
+					printExpression(be->getKid(0), PC);
+					PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+					printExpression(be->getKid(1), PC);
+					PC << ")";
 				}
+			} else if (e->getKind() == Expr::Concat
+					|| e->getKind() == Expr::SExt) {
+				printExpr(e.get(), PC, indent, true);
+			} else {
+				printExpr(e.get(), PC, indent);
 			}
 		}
 	}
@@ -711,32 +680,16 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
 
 void ExprPPrinter::printSymbolicConstraints(llvm::raw_ostream &os,
 		const ConstraintManager &constraints) {
-	printExpressions(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
+	printCons(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
 int caseCount = 0;
-void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
+void ExprPPrinter::printCons(llvm::raw_ostream &os,
                               const ConstraintManager &constraints,
-                              const ref<Expr> &q,
-                              const ref<Expr> *evalExprsBegin,
-                              const ref<Expr> *evalExprsEnd,
-                              const Array * const *evalArraysBegin,
-                              const Array * const *evalArraysEnd,
-                              bool printArrayDecls) {
+                              const ref<Expr> &q) {
 	PPrinter p(os);
-
-	for (ConstraintManager::const_iterator it = constraints.begin(), ie =
-			constraints.end(); it != ie; ++it)
-		p.scan(*it);
-	p.scan(q);
-
-	for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it)
-		p.scan(*it);
-
 	PrintContext PC(os);
-
 	PC << "constraint " << ++caseCount << ": [";
-	// Ident at constraint list;
 	unsigned indent = PC.pos;
 	for (ConstraintManager::const_iterator it = constraints.begin(), ie =
 			constraints.end(); it != ie;) {
@@ -751,8 +704,6 @@ void ExprPPrinter::printExpressions(llvm::raw_ostream &os,
 
 void ExprPPrinter::printExpr(llvm::raw_ostream &os, const ref<Expr> &e){
 	  PPrinter p(os);
-	  p.scan(e);
-
 	  PrintContext PC(os);
 	  p.printExpression(e,PC);
 }
