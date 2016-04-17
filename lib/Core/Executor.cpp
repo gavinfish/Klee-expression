@@ -109,7 +109,7 @@ using namespace llvm;
 using namespace klee;
 
 
-
+const char *KLEE_OUTPUT_NAME = "klee_output";
 
 
 namespace {
@@ -1425,9 +1425,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           CallInst *ci = dyn_cast<CallInst>(caller);
           Function *cf = ci->getCalledFunction();
           const char *funcName = cf->getName().data();
-          const char *targetName = "klee_output";
+          const char *targetName = KLEE_OUTPUT_NAME;
           if(strstr(funcName, targetName) != NULL){
-              std::cout<<"expression: "<<std::flush;
+//              std::cout<<"expression: "<<std::flush;
               LLVMExprOstream::printExpr(result);
               std::cout<<"\n"<<std::endl;
           }
@@ -1641,6 +1641,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
 
+			const char *funcName = f->getName().data();
+			const char *targetName = KLEE_OUTPUT_NAME;
+			if (strstr(funcName, targetName) != NULL) {
+				// Get the name of the variable needed symbolic expression
+				std::string value = specialFunctionHandler->readStringAtAddress(
+						state, arguments[0]);
+				std::cout << value << " = " << std::flush;
+			}
       executeCall(state, ki, f, arguments);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
