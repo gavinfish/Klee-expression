@@ -428,11 +428,26 @@ public:
 				printWidth = true;
 			if (printWidth)
 				PC << "(w" << e->getWidth() << " ";
-			if (e->getWidth() <= 64) {
-				PC << e->getSExtValue();
-			} else {
+			if (e->getWidth() <= 32) {
+				if(e->isFloat()) {
+					PC << e->getFloat();
+				}
+				else {
+					PC << e->getSExtValue();
+				}
+			}
+			else if (e->getWidth() <= 64) {
+				// FixMe cannot distinguish double from float in APFloat, here should use isDouble
+				if(e->isFloat()) {
+					PC << e->getDouble();
+				}
+				else {
+					PC << e->getSExtValue();
+				}
+			}
+			else {
 				std::string S;
-				e->toString(S);
+				e->toStringSigned(S);
 				PC << S;
 			}
 			if (printWidth)

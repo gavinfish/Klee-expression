@@ -941,8 +941,14 @@ public:
 
 private:
   llvm::APInt value;
+  bool isFloatType;
+  bool isDoubleType;
 
   ConstantExpr(const llvm::APInt &v) : value(v) {}
+
+	ConstantExpr(const llvm::APInt &v, bool isFloat, bool isDouble) :
+			value(v), isFloatType(isFloat), isDoubleType(isDouble) {
+	}
 
 public:
   ~ConstantExpr() {}
@@ -992,10 +998,28 @@ public:
     return value.getLimitedValue(Limit);
   }
 
+  double getDouble() const {
+	  return value.bitsToDouble();
+  }
+
+  float getFloat()const {
+	  return value.bitsToFloat();
+  }
+
+  bool isFloat() const {
+	  return isFloatType;
+  }
+
+  bool isDouble() const {
+	  return isDoubleType;
+  }
+
   /// toString - Return the constant value as a string
   /// \param Res specifies the string for the result to be placed in
   /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
   void toString(std::string &Res, unsigned radix = 10) const;
+
+  void toStringSigned(std::string &Res, unsigned radix = 10) const;
 
   int compareContents(const Expr &b) const {
     const ConstantExpr &cb = static_cast<const ConstantExpr &>(b);
@@ -1022,8 +1046,20 @@ public:
     return r;
   }
 
+  static ref<ConstantExpr> alloc(const llvm::APInt &v, bool isFloat, bool isDouble) {
+    ref<ConstantExpr> r(new ConstantExpr(v, isFloat, isDouble));
+    r->computeHash();
+    return r;
+  }
+
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
+	if (&f.getSemantics() == (const llvm::fltSemantics*)&llvm::APFloat::IEEEdouble) {
+		return alloc(f.bitcastToAPInt(), false, true);
+	}
+	else if (&f.getSemantics() == (const llvm::fltSemantics*)&llvm::APFloat::IEEEsingle) {
+		return alloc(f.bitcastToAPInt(), true, false);
+	}
+    return alloc(f.bitcastToAPInt(), false, false);
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {

@@ -351,6 +351,10 @@ void ConstantExpr::toString(std::string &Res, unsigned radix) const {
   Res = value.toString(radix, false);
 }
 
+void ConstantExpr::toStringSigned(std::string &Res, unsigned radix) const {
+  Res = value.toString(radix, true);
+}
+
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
   Expr::Width W = getWidth() + RHS->getWidth();
   APInt Tmp(value);
