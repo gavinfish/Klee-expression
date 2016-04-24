@@ -546,9 +546,21 @@ public:
 					printExpression(be->getKid(1), PC);
 					PC << ")";
 				}
-			} else if (e->getKind() == Expr::Concat
-					|| e->getKind() == Expr::SExt) {
+			} else if (e->getKind() == Expr::Concat) {
+				const ConcatExpr *ce = dyn_cast<ConcatExpr>(e);
+				printExpression(ce->getKid(1), PC);
+			} else if(e->getKind() == Expr::SExt) {
 				printExpr(e.get(), PC, indent, true);
+			} else if (e->getKind() == Expr::Method){
+				const MethodExpr *me = dyn_cast<MethodExpr>(e);
+				PC << me->name << "(";
+				for(unsigned i=0; i < me->getNumKids(); ++i) {
+					printExpression(me->args[i], PC);
+					if (i != me->getNumKids()-1) {
+						PC << ", ";
+					}
+				}
+				PC << ")";
 			} else {
 				printExpr(e.get(), PC, indent);
 			}

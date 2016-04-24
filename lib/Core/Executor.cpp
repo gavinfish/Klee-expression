@@ -1648,6 +1648,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 				std::string value = specialFunctionHandler->readStringAtAddress(
 						state, arguments[0]);
 				std::cout << value << " = " << std::flush;
+//			  	LLVMExprOstream::printExpr(arguments[1]);
 			}
       executeCall(state, ki, f, arguments);
     } else {
@@ -1935,6 +1936,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
+//    if(value->getKind() == Expr::Method) {
+//    	base = value;
+//    	return;
+//    }
+//    std::cout<<"vnumber: "<<ki->operands[0]<<std::endl<<std::flush;
+//    std::cout<<"value: "<<std::flush;
+//    LLVMExprOstream::printExpr(value);
+//    std::cout<<"\n"<<std::flush;
     executeMemoryOperation(state, true, base, value, 0);
     break;
   }
@@ -2149,6 +2158,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToUI: {
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
+    // deal with method expression
+    ref<Expr> ex = eval(ki, 0, state).value;
+    if (ex->getKind() == Expr::Method) {
+    	bindLocal(ki, state, ex);
+    	break;
+    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
@@ -2170,6 +2185,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToSI: {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
+    // deal with method expression
+    ref<Expr> ex = eval(ki, 0, state).value;
+    if (ex->getKind() == Expr::Method) {
+    	bindLocal(ki, state, ex);
+    	break;
+    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
@@ -2191,6 +2212,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::UIToFP: {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
+    // deal with method expression
+    ref<Expr> ex = eval(ki, 0, state).value;
+    if (ex->getKind() == Expr::Method) {
+    	bindLocal(ki, state, ex);
+    	break;
+    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
@@ -2207,6 +2234,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::SIToFP: {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
+    // deal with method expression
+    ref<Expr> ex = eval(ki, 0, state).value;
+    if (ex->getKind() == Expr::Method) {
+    	bindLocal(ki, state, ex);
+    	break;
+    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
@@ -2783,11 +2816,35 @@ static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
 
+const char *methods[]={"sin","cos","tan","cot","log","exp","bound","pi","euler","maximum","minimum","abs"};
+std::vector<const char*> methodNames(methods,methods+12);
+
 void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
                                     Function *function,
                                     std::vector< ref<Expr> > &arguments) {
   // check if mathFunctionHandler wants it
+  const char *name = function->getName().data();
+  bool isNeeded = false;
+  std::vector<const char*>::iterator it;
+  for (it=methodNames.begin();it!=methodNames.end();it++) {
+//	  std::cout<<"name: "<<name<<std::endl<<std::flush;
+//	  std::cout<<"it: "<<*it<<std::endl<<std::flush;
+	  if(strstr(name, *it) != NULL) {
+		  isNeeded = true;
+		  name = *it;
+		  break;
+	  }
+  }
+  if (isNeeded) {
+//	  ref<Expr> src = eval(target, 0, state).value;
+//	  LLVMExprOstream::printExpr(src);
+	  ref<Expr> result = MethodExpr::create(name, arguments);
+	  bindLocal(target, state, result);
+//	  LLVMExprOstream::printExpr(getDestCell(state, target).value);
+//	  klee_warning("binding success");
+	  return;
+  }
 
 
   // check if specialFunctionHandler wants it

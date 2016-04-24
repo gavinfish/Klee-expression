@@ -121,6 +121,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
 #define X(C) case C: os << #C; break
     X(Constant);
     X(NotOptimized);
+    X(Method);
     X(Read);
     X(Select);
     X(Concat);
@@ -481,6 +482,12 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
   return NotOptimizedExpr::alloc(src);
+}
+
+/***/
+
+ref<Expr>  MethodExpr::create(const char *name, std::vector<ref<Expr> > args) {
+  return MethodExpr::alloc(name, args);
 }
 
 /***/
