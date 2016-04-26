@@ -19,6 +19,8 @@ namespace klee{
 
     static void saveExpr(const char* filePath, const ref<Expr> &e);
 
+    static void saveExpr(std::string name, const char* filePath, const ref<Expr> &e);
+
     static void saveConstraints(const char* filePath, const ConstraintManager &constraints);
   };
 }

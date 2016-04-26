@@ -552,15 +552,17 @@ public:
 					else{
 						PC << "(";
 						printExpression(be->getKid(1), PC);
-						PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+//						PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+						PC << ExprKindView::getSymbol(be->getKind());
 						printExpression(be->getKid(0), PC);
 						PC << ")";
 					}
 				} else {
 					PC << "(";
-					printExpression(be->getKid(1), PC);
-					PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
 					printExpression(be->getKid(0), PC);
+//					PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+					PC << ExprKindView::getSymbol(be->getKind());
+					printExpression(be->getKid(1), PC);
 					PC << ")";
 				}
 			} else if (e->getKind() == Expr::Concat) {

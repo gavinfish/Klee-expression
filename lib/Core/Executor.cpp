@@ -1421,16 +1421,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           }
           bindLocal(kcaller, state, result);
 
-          // Get all expressions by Ret instruction of klee_output
-          CallInst *ci = dyn_cast<CallInst>(caller);
-          Function *cf = ci->getCalledFunction();
-          const char *funcName = cf->getName().data();
-          const char *targetName = KLEE_OUTPUT_NAME;
-          if(strstr(funcName, targetName) != NULL){
-//              std::cout<<"expression: "<<std::flush;
-              LLVMExprOstream::printExpr(result);
-              std::cout<<"\n"<<std::endl;
-          }
+//          // Get all expressions by Ret instruction of klee_output
+//          CallInst *ci = dyn_cast<CallInst>(caller);
+//          Function *cf = ci->getCalledFunction();
+//          const char *funcName = cf->getName().data();
+//          const char *targetName = KLEE_OUTPUT_NAME;
+//          if(strstr(funcName, targetName) != NULL){
+////              std::cout<<"expression: "<<std::flush;
+//              LLVMExprOstream::printExpr(result);
+//              std::cout<<"\n"<<std::endl;
+//          }
         }
       } else {
         // We check that the return value has no users instead of
@@ -1648,7 +1648,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 				std::string value = specialFunctionHandler->readStringAtAddress(
 						state, arguments[0]);
 				std::cout << value << " = " << std::flush;
-//			  	LLVMExprOstream::printExpr(arguments[1]);
+			  	LLVMExprOstream::printExpr(arguments[1]);
+			  	std::cout << "\n" <<std::endl<<std::flush;
+				LLVMExprOstream::saveExpr(value, "expression.txt",
+						arguments[1]);
 			}
       executeCall(state, ki, f, arguments);
     } else {
@@ -2663,7 +2666,8 @@ void Executor::terminateState(ExecutionState &state) {
 
   std::cout<<std::flush;
   const ConstraintManager myConstraints = state.constraints;
-  LLVMExprOstream::printConstraints(myConstraints);
+//  LLVMExprOstream::printConstraints(myConstraints);
+  LLVMExprOstream::saveConstraints("expression.txt", myConstraints);
 
 
   interpreterHandler->incPathsExplored();
@@ -2796,8 +2800,8 @@ const char *methods[] = { "asinh", "acosh", "atanh", "acoth", "asech",
 		"acosech", "atan", "asin", "acos", "sinh", "cosh", "coth", "tanh",
 		"sech", "cosech", "sin", "cos", "tan", "cot", "sec", "cosec", "cotan",
 		"log", "exp", "bound", "pi", "euler", "maximum", "minimum", "abs",
-		"setRwidth", "sqrt", "limit", "lipschitz" };
-std::vector<const char*> methodNames(methods,methods+34);
+		"setRwidth", "sqrt", "limit", "lipschitz", "approx" };
+std::vector<const char*> methodNames(methods,methods+35);
 
 void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
