@@ -358,6 +358,16 @@ private:
     }
   }
 
+  void printExprs(const Expr *ep, PrintContext &PC, unsigned indent, bool printConstWidth=false) {
+	    bool simple = hasSimpleKids(ep);
+
+	    printExpression(ep->getKid(0), PC);
+	    for (unsigned i=1; i<ep->getNumKids(); i++) {
+	      printSeparator(PC, simple, indent);
+	      printExpression(ep->getKid(i), PC, printConstWidth);
+	    }
+	  }
+
 public:
   PPrinter(llvm::raw_ostream &_os) : os(_os), newline("\n") {
     reset();
@@ -539,18 +549,25 @@ public:
 						PC << "! ";
 						printExpression(be->getKid(1), PC);
 					}
+					else{
+						PC << "(";
+						printExpression(be->getKid(1), PC);
+						PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+						printExpression(be->getKid(0), PC);
+						PC << ")";
+					}
 				} else {
 					PC << "(";
-					printExpression(be->getKid(0), PC);
-					PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
 					printExpression(be->getKid(1), PC);
+					PC << " " << ExprKindView::getSymbol(be->getKind()) << " ";
+					printExpression(be->getKid(0), PC);
 					PC << ")";
 				}
 			} else if (e->getKind() == Expr::Concat) {
 				const ConcatExpr *ce = dyn_cast<ConcatExpr>(e);
-				printExpression(ce->getKid(1), PC);
+				printExpression(ce->getKid(1), PC, true);
 			} else if(e->getKind() == Expr::SExt) {
-				printExpr(e.get(), PC, indent, true);
+				printExprs(e.get(), PC, indent, true);
 			} else if (e->getKind() == Expr::Method){
 				const MethodExpr *me = dyn_cast<MethodExpr>(e);
 				PC << me->name << "(";
@@ -562,7 +579,7 @@ public:
 				}
 				PC << ")";
 			} else {
-				printExpr(e.get(), PC, indent);
+				printExprs(e.get(), PC, indent);
 			}
 		}
 	}

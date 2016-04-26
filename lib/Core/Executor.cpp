@@ -2158,12 +2158,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToUI: {
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    // deal with method expression
-    ref<Expr> ex = eval(ki, 0, state).value;
-    if (ex->getKind() == Expr::Method) {
-    	bindLocal(ki, state, ex);
-    	break;
-    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
@@ -2185,12 +2179,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToSI: {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    // deal with method expression
-    ref<Expr> ex = eval(ki, 0, state).value;
-    if (ex->getKind() == Expr::Method) {
-    	bindLocal(ki, state, ex);
-    	break;
-    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
@@ -2212,12 +2200,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::UIToFP: {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    // deal with method expression
-    ref<Expr> ex = eval(ki, 0, state).value;
-    if (ex->getKind() == Expr::Method) {
-    	bindLocal(ki, state, ex);
-    	break;
-    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
@@ -2234,12 +2216,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::SIToFP: {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    // deal with method expression
-    ref<Expr> ex = eval(ki, 0, state).value;
-    if (ex->getKind() == Expr::Method) {
-    	bindLocal(ki, state, ex);
-    	break;
-    }
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
@@ -2816,8 +2792,12 @@ static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
 
-const char *methods[]={"sin","cos","tan","cot","log","exp","bound","pi","euler","maximum","minimum","abs"};
-std::vector<const char*> methodNames(methods,methods+12);
+const char *methods[] = { "asinh", "acosh", "atanh", "acoth", "asech",
+		"acosech", "atan", "asin", "acos", "sinh", "cosh", "coth", "tanh",
+		"sech", "cosech", "sin", "cos", "tan", "cot", "sec", "cosec", "cotan",
+		"log", "exp", "bound", "pi", "euler", "maximum", "minimum", "abs",
+		"setRwidth", "sqrt", "limit", "lipschitz" };
+std::vector<const char*> methodNames(methods,methods+34);
 
 void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
