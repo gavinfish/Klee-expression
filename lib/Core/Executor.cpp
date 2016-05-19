@@ -1644,6 +1644,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 			const char *funcName = f->getName().data();
 			const char *targetName = KLEE_OUTPUT_NAME;
 			if (strstr(funcName, targetName) != NULL) {
+				const ConstraintManager myConstraints = state.constraints;
+				LLVMExprOstream::saveConstraints("expression.txt", myConstraints);
+
 				// Get the name of the variable needed symbolic expression
 				std::string value = specialFunctionHandler->readStringAtAddress(
 						state, arguments[0]);
@@ -2664,10 +2667,10 @@ void Executor::terminateState(ExecutionState &state) {
                       "replay did not consume all objects in test input.");
   }
 
-  std::cout<<std::flush;
-  const ConstraintManager myConstraints = state.constraints;
-//  LLVMExprOstream::printConstraints(myConstraints);
-  LLVMExprOstream::saveConstraints("expression.txt", myConstraints);
+//  std::cout<<std::flush;
+//  const ConstraintManager myConstraints = state.constraints;
+////  LLVMExprOstream::printConstraints(myConstraints);
+//  LLVMExprOstream::saveConstraints("expression.txt", myConstraints);
 
 
   interpreterHandler->incPathsExplored();
@@ -2796,12 +2799,13 @@ static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
 
+// long name should be in front of short one, like asin and sin
 const char *methods[] = { "asinh", "acosh", "atanh", "acoth", "asech",
 		"acosech", "atan", "asin", "acos", "sinh", "cosh", "coth", "tanh",
 		"sech", "cosech", "sin", "cos", "tan", "cot", "sec", "cosec", "cotan",
-		"log", "exp", "bound", "pi", "euler", "maximum", "minimum", "abs",
-		"setRwidth", "sqrt", "limit", "lipschitz", "approx" };
-std::vector<const char*> methodNames(methods,methods+35);
+		"log", "exp", "bound", "pi", "euler", "maximum", "minimum", "fabs", "abs",
+		"setRwidth", "sqrt", "pow", "limit", "lipschitz", "approx" };
+std::vector<const char*> methodNames(methods,methods+37);
 
 void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
